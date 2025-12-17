@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧬 gRNA引物设计器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        /* 选项卡样式 */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 30px;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            color: #4CAF50;
+        }
+        
+        .tab.active {
+            color: #4CAF50;
+            border-bottom-color: #4CAF50;
+            background: #f0f9f0;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 单对设计样式 */
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .input-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 批量设计样式 */
+        .batch-section {
+            margin-bottom: 30px;
+        }
+        
+        .batch-input {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+        
+        .batch-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .batch-example {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        /* 结果表格样式 */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .results-table th {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .results-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .results-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .results-table tr:hover {
+            background: #e8f5e8;
+        }
+        
+        .seq-cell {
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            max-width: 300px;
+        }
+        
+        /* 通用样式 */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        
+        input[type="text"] {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .seq-info {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .info-badge {
+            background: #f0f9ff;
+            padding: 5px 10px;
+            border-radius: 15px;
+            border: 1px solid #d1ecf1;
+        }
+        
+        .info-badge.warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        
+        .design-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin: 10px 0;
+        }
+        
+        .design-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .design-btn:active {
+            transform: translateY(0);
+        }
+        
+        .design-btn.full-width {
+            width: 100%;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .result-section {
+            margin-top: 30px;
+        }
+        
+        .success-msg {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #c3e6cb;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        .primers-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .primers-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .primer-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .primer-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .primer-title.forward { color: #3498db; }
+        .primer-title.reverse { color: #e74c3c; }
+        
+        .primer-title h3 {
+            font-size: 1.3em;
+        }
+        
+        .icon {
+            font-size: 1.5em;
+        }
+        
+        .sequence-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            word-break: break-all;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+        
+        .properties {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .property {
+            background: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid #dee2e6;
+            font-size: 0.9em;
+        }
+        
+        .property.highlight {
+            background: #e3f2fd;
+            border-color: #bbdefb;
+            color: #1565c0;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #eee;
+            font-size: 0.9em;
+        }
+        
+        .dna-helix {
+            font-size: 2em;
+            letter-spacing: 5px;
+            margin: 10px 0;
+            color: #4CAF50;
+        }
+        
+        .instructions {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .export-options {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .export-btn {
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .export-btn:hover {
+            background: #545b62;
+        }
+        
+        .export-btn.csv { background: #28a745; }
+        .export-btn.csv:hover { background: #1e7e34; }
+        
+        .export-btn.fasta { background: #17a2b8; }
+        .export-btn.fasta:hover { background: #117a8b; }
+        
+        .export-btn.excel { background: #20c997; }
+        .export-btn.excel:hover { background: #1a9367; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="dna-helix">🧬</div>
+            <h1>gRNA引物设计器</h1>
+            <p class="subtitle">AAV CAG FlexNLSCherry2x U6gRNA 一步法双gRNA构建</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('single')">单对设计</div>
+                <div class="tab" onclick="switchTab('batch')">批量设计</div>
+                <div class="tab" onclick="switchTab('plasmid')">质粒构建流程</div>
+                
+            </div>
+            
+            <!-- 单对设计选项卡 -->
+            <div id="tab-single" class="tab-content active">
+                <div class="instructions">
+                    <h3>使用说明：</h3>
+                    <ul>
+                        <li>输入gRNA1和gRNA2的DNA序列（20bp）</li>
+                        <li>如果序列不是以G开头，系统会自动添加5'端G</li>
+                        <li>点击"设计引物"按钮生成正向和反向引物</li>
+                        <li>引物适用于T4限制性酶切克隆方法（BbsI-Esp3I）</li>
+                    </ul>
+                </div>
+                
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="gRNA1">gRNA1 序列 (正义链)</label>
+                        <input type="text" id="gRNA1" value="AGCACGCCGAGCCCCAGTAT" 
+                               placeholder="例如: AGCACGCCGAGCCCCAGTAT">
+                        <div class="seq-info">
+                            <span id="gRNA1-length" class="info-badge">长度: 20 bp</span>
+                            <span id="gRNA1-gc" class="info-badge">GC含量: 计算中...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="gRNA2">gRNA2 序列 (正义链)</label>
+                        <input type="text" id="gRNA2" value="AGTTTATACCGTGCGTTGAA" 
+                               placeholder="例如: AGTTTATACCGTGCGTTGAA">
+                        <div class="seq-info">
+                            <span id="gRNA2-length" class="info-badge">长度: 20 bp</span>
+                            <span id="gRNA2-gc" class="info-badge">GC含量: 计算中...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="design-btn full-width" onclick="designPrimers()">🎯 设计引物</button>
+                
+                <div id="single-result-section" class="result-section" style="display: none;">
+                    <div class="success-msg">✅ 引物设计完成！</div>
+                    
+                    <div class="primers-grid">
+                        <div class="primer-card">
+                            <div class="primer-title forward">
+                                <span class="icon">🔷</span>
+                                <h3>正向引物 (Forward Primer)</h3>
+                            </div>
+                            <div class="sequence-box" id="forward-primer"></div>
+                            <div class="properties">
+                                <div class="property" id="forward-length"></div>
+                                <div class="property" id="forward-gc"></div>
+                                <div class="property highlight" id="forward-tm"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="primer-card">
+                            <div class="primer-title reverse">
+                                <span class="icon">🔶</span>
+                                <h3>反向引物 (Reverse Primer)</h3>
+                            </div>
+                            <div class="sequence-box" id="reverse-primer"></div>
+                            <div class="properties">
+                                <div class="property" id="reverse-length"></div>
+                                <div class="property" id="reverse-gc"></div>
+                                <div class="property highlight" id="reverse-tm"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button class="design-btn" onclick="copyAllPrimers()">
+                            📋 复制所有引物
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 批量设计选项卡 -->
+            <div id="tab-batch" class="tab-content">
+                <div class="instructions">
+                    <h3>批量设计说明：</h3>
+                    <ul>
+                        <li>每行输入一对gRNA序列，用逗号、制表符或空格分隔</li>
+                        <li>支持多种格式，系统会自动识别分隔符</li>
+                        <li>点击"批量设计"按钮生成所有引物对</li>
+                        <li>可以使用右侧的"生成示例"按钮查看格式</li>
+                    </ul>
+                </div>
+                
+                <div class="batch-section">
+                    <label for="batch-input">批量输入gRNA序列对</label>
+                    <textarea class="batch-input" id="batch-input" 
+                        placeholder="每行一对gRNA序列，例如：
+AGCACGCCGAGCCCCAGTAT,AGTTTATACCGTGCGTTGAA
+TAGCTAGCTAGCTAGCTAGC,TCGATCGATCGATCGATCG"></textarea>
+                    
+                    <div class="button-group">
+                        <button class="design-btn" onclick="designBatchPrimers()">🔄 批量设计</button>
+                        <button class="design-btn" onclick="generateExample()" style="background: #6c757d;">
+                            📋 生成示例
+                        </button>
+                        <button class="design-btn" onclick="clearBatchInput()" style="background: #dc3545;">
+                            🗑️ 清空输入
+                        </button>
+                    </div>
+                    
+                    <div id="batch-result-section" class="result-section" style="display: none;">
+                        <div class="success-msg">
+                            ✅ 批量设计完成！共设计了 <span id="batch-count">0</span> 对引物
+                        </div>
+                        
+                        <div id="batch-results-table"></div>
+                        
+                        <div class="export-options">
+                            <button class="export-btn csv" onclick="exportCSV()">📥 导出CSV</button>
+                            <button class="export-btn fasta" onclick="exportFASTA()">🧬 导出FASTA</button>
+                            <button class="export-btn excel" onclick="exportExcel()">📊 导出Excel</button>
+                            <button class="export-btn" onclick="copyAllResults()">📋 复制全部结果</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 添加质粒图谱选项卡内容 -->
+            <div id="tab-plasmid" class="tab-content">
+                <div class="instructions">
+                    <h3>质粒构建图谱</h3>
+                    <p>Golden Gate克隆的CRISPR质粒构建示意图</p>
+                </div>
+                
+                <div class="plasmid-section">
+                    <!-- 方案1A: 使用本地图片（如果图片在同一目录） -->
+
+                    
+                    <!-- 或者方案1B: 使用在线图片链接 -->
+           
+                    <div class="plasmid-image">
+                        <img src="https://github.com/KeJiiii/dgRNA-primer-design/raw/main/workflow.jpg" alt="质粒构建图谱" 
+                            style="width: 100%; max-width: 800px;">
+                        <p class="image-caption">图1: 双gRNA克隆示意图</p>
+                    </div>
+                </div>
+                
+                <!-- 添加图例说明 -->
+                <div class="plasmid-legend" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <h4>说明：</h4>
+                    <ul style="columns: 2; column-gap: 40px;">
+                        <li><strong>backbone</strong>：AAV CAG FlexNLSCherry2x U6gRNA</li>
+                        <li><strong>insert template</strong>：AAV CAG FlexNLSCherry2x U6gRNA</li>
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🧬 chentianlun518@gmail.com </p>
+            
+    </div>
+    
+    <script>
+        // 固定序列组件
+        const bbsI = "ccgggtcttcgaGAAGACctcacc";
+        const binding1 = "gttttagagctagaaatagc";
+        const esp3i = "gtttgGAGACGgatcc";
+        const binding2 = "tgtggaaaggacgaaacacc";
+        
+        // 存储批量结果
+        let batchResults = [];
+        
+        // 选项卡切换
+        function switchTab(tabName) {
+            // 更新选项卡激活状态
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            // 清空结果
+            if (tabName === 'single') {
+                clearSingleResults();
+            } else {
+                clearBatchResults();
+            }
+        }
+        
+        // 实时更新序列信息
+        document.getElementById('gRNA1').addEventListener('input', updateSeqInfo);
+        document.getElementById('gRNA2').addEventListener('input', updateSeqInfo);
+        
+        // 初始更新
+        updateSeqInfo();
+        
+        function updateSeqInfo() {
+            const gRNA1 = document.getElementById('gRNA1').value.toUpperCase();
+            const gRNA2 = document.getElementById('gRNA2').value.toUpperCase();
+            
+            // 更新gRNA1信息
+            document.getElementById('gRNA1-length').textContent = `长度: ${gRNA1.length} bp`;
+            document.getElementById('gRNA1-gc').textContent = `GC含量: ${calculateGC(gRNA1)}%`;
+            
+            // 更新gRNA2信息
+            document.getElementById('gRNA2-length').textContent = `长度: ${gRNA2.length} bp`;
+            document.getElementById('gRNA2-gc').textContent = `GC含量: ${calculateGC(gRNA2)}%`;
+            
+            // 验证序列
+            validateSequence(gRNA1, 'gRNA1');
+            validateSequence(gRNA2, 'gRNA2');
+        }
+        
+        function calculateGC(sequence) {
+            if (!sequence) return 0;
+            const gcCount = (sequence.match(/[GC]/gi) || []).length;
+            return ((gcCount / sequence.length) * 100).toFixed(1);
+        }
+        
+        function validateSequence(seq, id) {
+            const badge = document.getElementById(`${id}-gc`);
+            if (!/^[ATCG]*$/i.test(seq)) {
+                badge.classList.add('warning');
+                badge.textContent += ' (含非标准碱基)';
+            } else {
+                badge.classList.remove('warning');
+            }
+        }
+        
+        function getReverseComplement(seq) {
+            const complement = {
+                'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C',
+                'a': 't', 't': 'a', 'c': 'g', 'g': 'c'
+            };
+            return seq.split('').reverse().map(base => complement[base] || base).join('');
+        }
+        
+        function calculateTm(seq) {
+            // 简化的Tm计算公式
+            const gc = parseFloat(calculateGC(seq));
+            return (gc * 0.41) + 20;
+        }
+        
+        // 单对设计函数
+        function designPrimers() {
+            let gRNA1 = document.getElementById('gRNA1').value;
+            let gRNA2 = document.getElementById('gRNA2').value;
+            
+            if (!gRNA1 || !gRNA2) {
+                alert('请输入gRNA序列！');
+                return;
+            }
+            
+            // 添加5'端G（如果不是G开头）
+            const g1_prefix = gRNA1.match(/^[Gg]/) ? "" : "G";
+            const g2_prefix = gRNA2.match(/^[Gg]/) ? "" : "G";
+            
+            // 构建正向引物
+            const F_primer = bbsI + g1_prefix + gRNA1 + binding1;
+            
+            // 构建反向引物（需要反向互补）
+            const R_template = binding2 + g2_prefix + gRNA2 + esp3i;
+            const R_primer = getReverseComplement(R_template);
+            
+            // 显示结果
+            document.getElementById('forward-primer').textContent = F_primer;
+            document.getElementById('reverse-primer').textContent = R_primer;
+            
+            // 显示引物信息
+            document.getElementById('forward-length').textContent = `长度: ${F_primer.length} bp`;
+            document.getElementById('forward-gc').textContent = `GC: ${calculateGC(F_primer)}%`;
+            document.getElementById('forward-tm').textContent = `Tm: ~${calculateTm(F_primer).toFixed(1)}°C`;
+            
+            document.getElementById('reverse-length').textContent = `长度: ${R_primer.length} bp`;
+            document.getElementById('reverse-gc').textContent = `GC: ${calculateGC(R_primer)}%`;
+            document.getElementById('reverse-tm').textContent = `Tm: ~${calculateTm(R_primer).toFixed(1)}°C`;
+            
+            // 显示结果区域
+            document.getElementById('single-result-section').style.display = 'block';
+            
+            // 滚动到结果区域
+            document.getElementById('single-result-section').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // 批量设计函数
+        function designBatchPrimers() {
+            const batchInput = document.getElementById('batch-input').value.trim();
+            if (!batchInput) {
+                alert('请输入批量序列！');
+                return;
+            }
+            
+            const lines = batchInput.split('\n').filter(line => line.trim());
+            batchResults = [];
+            
+            lines.forEach((line, index) => {
+                const parts = line.trim().split(/[\t, ]+/).filter(part => part);
+                
+                if (parts.length >= 2) {
+                    const gRNA1 = parts[0];
+                    const gRNA2 = parts[1];
+                    
+                    try {
+                        // 添加5'端G（如果不是G开头）
+                        const g1_prefix = gRNA1.match(/^[Gg]/) ? "" : "G";
+                        const g2_prefix = gRNA2.match(/^[Gg]/) ? "" : "G";
+                        
+                        // 构建正向引物
+                        const F_primer = bbsI + g1_prefix + gRNA1 + binding1;
+                        
+                        // 构建反向引物（需要反向互补）
+                        const R_template = binding2 + g2_prefix + gRNA2 + esp3i;
+                        const R_primer = getReverseComplement(R_template);
+                        
+                        batchResults.push({
+                            id: `Pair_${index + 1}`,
+                            gRNA1: gRNA1,
+                            gRNA2: gRNA2,
+                            forward: F_primer,
+                            reverse: R_primer,
+                            f_length: F_primer.length,
+                            r_length: R_primer.length,
+                            f_gc: calculateGC(F_primer),
+                            r_gc: calculateGC(R_primer),
+                            f_tm: calculateTm(F_primer).toFixed(1),
+                            r_tm: calculateTm(R_primer).toFixed(1)
+                        });
+                    } catch (error) {
+                        console.error(`第${index + 1}行处理错误:`, error);
+                    }
+                }
+            });
+            
+            if (batchResults.length > 0) {
+                displayBatchResults();
+                document.getElementById('batch-count').textContent = batchResults.length;
+                document.getElementById('batch-result-section').style.display = 'block';
+                document.getElementById('batch-result-section').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert('未找到有效的gRNA序列对！请检查输入格式。');
+            }
+        }
+        
+        function displayBatchResults() {
+            const table = document.createElement('table');
+            table.className = 'results-table';
+            
+            // 表头
+            const thead = table.createTHead();
+            const headerRow = thead.insertRow();
+            const headers = ['序号', 'gRNA1', 'gRNA2', '正向引物', '反向引物', '长度', 'GC%', 'Tm'];
+            
+            headers.forEach(headerText => {
+                const th = document.createElement('th');
+                th.textContent = headerText;
+                headerRow.appendChild(th);
+            });
+            
+            // 表格内容
+            const tbody = table.createTBody();
+            
+            batchResults.forEach((result, index) => {
+                const row = tbody.insertRow();
+                
+                // 序号
+                const cell1 = row.insertCell();
+                cell1.textContent = result.id;
+                
+                // gRNA1
+                const cell2 = row.insertCell();
+                cell2.textContent = result.gRNA1;
+                cell2.className = 'seq-cell';
+                
+                // gRNA2
+                const cell3 = row.insertCell();
+                cell3.textContent = result.gRNA2;
+                cell3.className = 'seq-cell';
+                
+                // 正向引物
+                const cell4 = row.insertCell();
+                cell4.textContent = result.forward;
+                cell4.className = 'seq-cell';
+                
+                // 反向引物
+                const cell5 = row.insertCell();
+                cell5.textContent = result.reverse;
+                cell5.className = 'seq-cell';
+                
+                // 长度
+                const cell6 = row.insertCell();
+                cell6.innerHTML = `<b>F:</b> ${result.f_length} bp<br><b>R:</b> ${result.r_length} bp`;
+                
+                // GC含量
+                const cell7 = row.insertCell();
+                cell7.innerHTML = `<b>F:</b> ${result.f_gc}%<br><b>R:</b> ${result.r_gc}%`;
+                
+                // Tm值
+                const cell8 = row.insertCell();
+                cell8.innerHTML = `<b>F:</b> ${result.f_tm}°C<br><b>R:</b> ${result.r_tm}°C`;
+            });
+            
+            document.getElementById('batch-results-table').innerHTML = '';
+            document.getElementById('batch-results-table').appendChild(table);
+        }
+        
+        // 生成示例
+        function generateExample() {
+            const example = `AGCACGCCGAGCCCCAGTAT,AGTTTATACCGTGCGTTGAA
+TAGCTAGCTAGCTAGCTAGC,TCGATCGATCGATCGATCG
+AAACCCGGGTTTAAACCCGG,TTTGGGCCCAAATTTGGGCC
+ATCGATCGATCGATCGATCG,TAGCTAGCTAGCTAGCTAGC`;
+            
+            document.getElementById('batch-input').value = example;
+        }
+        
+        // 清空输入
+        function clearBatchInput() {
+            document.getElementById('batch-input').value = '';
+        }
+        
+        // 清空单对结果
+        function clearSingleResults() {
+            document.getElementById('single-result-section').style.display = 'none';
+        }
+        
+        // 清空批量结果
+        function clearBatchResults() {
+            document.getElementById('batch-result-section').style.display = 'none';
+            batchResults = [];
+        }
+        
+        // 导出功能
+        function exportCSV() {
+            if (batchResults.length === 0) {
+                alert('没有可导出的数据！');
+                return;
+            }
+            
+            const headers = ['ID', 'gRNA1', 'gRNA2', 'Forward_Primer', 'Reverse_Primer', 
+                           'F_Length', 'R_Length', 'F_GC%', 'R_GC%', 'F_Tm', 'R_Tm'];
+            
+            const csvRows = [
+                headers.join(','),
+                ...batchResults.map(row => [
+                    row.id,
+                    `"${row.gRNA1}"`,
+                    `"${row.gRNA2}"`,
+                    `"${row.forward}"`,
+                    `"${row.reverse}"`,
+                    row.f_length,
+                    row.r_length,
+                    row.f_gc,
+                    row.r_gc,
+                    row.f_tm,
+                    row.r_tm
+                ].join(','))
+            ];
+            
+            const csvContent = csvRows.join('\n');
+            downloadFile(csvContent, 'gRNA_primers.csv', 'text/csv');
+        }
+        
+        function exportFASTA() {
+            if (batchResults.length === 0) {
+                alert('没有可导出的数据！');
+                return;
+            }
+            
+            let fastaContent = '';
+            batchResults.forEach(row => {
+                fastaContent += `>${row.id}_F\n${row.forward}\n`;
+                fastaContent += `>${row.id}_R\n${row.reverse}\n`;
+            });
+            
+            downloadFile(fastaContent, 'gRNA_primers.fasta', 'text/plain');
+        }
+        
+        function exportExcel() {
+            if (batchResults.length === 0) {
+                alert('没有可导出的数据！');
+                return;
+            }
+            
+            // 创建Excel格式的CSV
+            const headers = ['ID', 'gRNA1', 'gRNA2', 'Forward Primer', 'Reverse Primer', 
+                           'F Length', 'R Length', 'F GC%', 'R GC%', 'F Tm', 'R Tm'];
+            
+            const csvRows = [
+                headers.join('\t'),
+                ...batchResults.map(row => [
+                    row.id,
+                    row.gRNA1,
+                    row.gRNA2,
+                    row.forward,
+                    row.reverse,
+                    row.f_length,
+                    row.r_length,
+                    row.f_gc,
+                    row.r_gc,
+                    row.f_tm,
+                    row.r_tm
+                ].join('\t'))
+            ];
+            
+            const excelContent = csvRows.join('\n');
+            downloadFile(excelContent, 'gRNA_primers.xls', 'application/vnd.ms-excel');
+        }
+        
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // 复制功能
+        function copyAllPrimers() {
+            const forward = document.getElementById('forward-primer').textContent;
+            const reverse = document.getElementById('reverse-primer').textContent;
+            
+            const text = `正向引物: ${forward}\n反向引物: ${reverse}\n\n生成时间: ${new Date().toLocaleString()}`;
+            
+            copyToClipboard(text, '单对引物');
+        }
+        
+        function copyAllResults() {
+            if (batchResults.length === 0) {
+                alert('没有可复制的数据！');
+                return;
+            }
+            
+            let text = `批量gRNA引物设计结果 (共${batchResults.length}对)\n\n`;
+            
+            batchResults.forEach(row => {
+                text += `${row.id}:\n`;
+                text += `  gRNA1: ${row.gRNA1}\n`;
+                text += `  gRNA2: ${row.gRNA2}\n`;
+                text += `  正向: ${row.forward}\n`;
+                text += `  反向: ${row.reverse}\n\n`;
+            });
+            
+            text += `生成时间: ${new Date().toLocaleString()}`;
+            
+            copyToClipboard(text, '批量结果');
+        }
+        
+        function copyToClipboard(text, label) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert(`✅ ${label}已复制到剪贴板！`);
+            }).catch(err => {
+                console.error('复制失败: ', err);
+                alert('复制失败，请手动选择并复制');
+            });
+        }
+        
+        // 添加快捷键支持
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                const activeTab = document.querySelector('.tab.active');
+                if (activeTab.textContent.includes('单对')) {
+                    designPrimers();
+                } else {
+                    designBatchPrimers();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
